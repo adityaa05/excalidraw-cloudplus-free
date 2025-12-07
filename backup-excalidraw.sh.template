@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# NOTE: Check your container name via 'docker ps'
+MONGO_CONTAINER="excalidraw-cloud-backup-mongodb-1"
+MONGO_DUMP_PATH="/path/to/your/mongo-dumps"
+
+# Backblaze B2 + restic credentials
+RESTIC_REPOSITORY="b2:your-bucket-name:restic-data"
+RESTIC_PASSWORD="your-strong-restic-password"
+B2_ACCOUNT_ID="your-b2-key-id"
+B2_ACCOUNT_KEY="your-b2-application-key"
+
+export RESTIC_REPOSITORY RESTIC_PASSWORD B2_ACCOUNT_ID B2_ACCOUNT_KEY
+
+echo "[$(date)] Starting Excalidraw backup..."
+
+# 1. Dump MongoDB (using -i for cron compatibility)
+echo "Creating MongoDB dump..."
+docker exec -i "$MONGO_CONTAINER" \
+  mongodump --username=excalidraw --password=change-this-password \
+  --authenticationDatabase=admin --out=/data/dump
+
+# 2. Backup to B2 with restic
+echo "Uploading to Backblaze B2..."
+restic backup "$MONGO_DUMP_PATH" --tag excalidraw
+
+# 3. Show latest snapshots
+echo "Latest snapshots:"
+restic snapshots --tag excalidraw --last 1
+
+echo "[$(date)] Backup complete!"

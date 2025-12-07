@@ -1,0 +1,7 @@
+.env
+backup-excalidraw.sh
+mongo-data/
+mongo-dumps/
+*.log
+.DS_Store
+.vscode/
